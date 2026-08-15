@@ -1,0 +1,546 @@
+// 鲸鱼桌宠 v2 —— 客户端（浏览器端）插件源码
+//
+// 运行平台：DeepSeek Harness（Cordis 插件体系）
+// 安装方式：将 plugin/whale-pet-v2.define.json 的内容提交给 cordis_define 并 cordis_run
+// 独立演示：直接用浏览器打开 demo/index.html（内嵌同一份源码 + 本地垫片）
+// 依赖的宿主接口：ctx.timeout / ctx.interval / ctx.effect、styles.insert、host.call('pet/poll')
+//
+// 本文件与 cordis_define 提交的代码一致，仅增加了此注释头。
+return {
+  inject: ['timer'],
+  apply(ctx) {
+    if (typeof document === 'undefined' || document.body === null || typeof window === 'undefined') {
+      console.error('whale-pet: 浏览器环境不可用')
+      return
+    }
+
+    // ---------- 鲸鱼原版 path（头在右侧、尾在左侧，朝右） ----------
+    const WHALE_PATH = 'M22.9168 1.43018C22.6713 1.31018 22.5658 1.53918 22.4223 1.65519C22.3733 1.69269 22.3318 1.74169 22.2903 1.78669C21.9317 2.1697 21.5127 2.42121 20.9657 2.39121C20.1657 2.34621 19.4827 2.59771 18.8787 3.20973C18.7502 2.45521 18.3236 2.0047 17.6746 1.71569C17.3351 1.56568 16.9916 1.41518 16.7536 1.08867C16.5876 0.856163 16.5421 0.597155 16.4591 0.341647C16.4061 0.187643 16.3536 0.0301382 16.1761 0.00363739C15.9836 -0.0263635 15.9081 0.135141 15.8326 0.270145C15.5306 0.822162 15.4136 1.43018 15.4251 2.0462C15.4516 3.43174 16.0366 4.53527 17.1991 5.3203C17.3311 5.4103 17.3651 5.5003 17.3236 5.63181C17.2441 5.90231 17.1501 6.16482 17.0671 6.43533C17.0141 6.60784 16.9351 6.64584 16.7501 6.57033C16.1121 6.30383 15.5611 5.90931 15.074 5.4328C14.2475 4.63328 13.5 3.75075 12.568 3.05973C12.349 2.89822 12.13 2.74822 11.9034 2.60522C10.9524 1.68169 12.028 0.923165 12.277 0.833162C12.5375 0.739159 12.3675 0.41615 11.5259 0.42015C10.6844 0.42365 9.91439 0.705658 8.93286 1.08117C8.78935 1.13767 8.63835 1.17867 8.48384 1.21267C7.59332 1.04367 6.66829 1.00617 5.70226 1.11517C3.88321 1.31768 2.43016 2.1777 1.36213 3.64575C0.0790928 5.4103 -0.222916 7.41536 0.146595 9.50642C0.535106 11.7105 1.66014 13.535 3.38869 14.9616C5.18125 16.4406 7.24581 17.1657 9.60138 17.0266C11.0319 16.9441 12.6245 16.7526 14.421 15.2321C14.874 15.4576 15.3496 15.5476 16.1381 15.6151C16.7456 15.6716 17.3306 15.5851 17.7836 15.4911C18.4931 15.3411 18.4441 14.6841 18.1876 14.5636C16.1081 13.595 16.5646 13.9891 16.1496 13.67C17.2061 12.42 18.8202 10.1979 19.3182 7.17235C19.3672 6.83834 19.4297 6.36783 19.4222 6.09732C19.4182 5.93231 19.4562 5.86831 19.6447 5.84931C20.1657 5.78931 20.6712 5.64681 21.1357 5.3913C22.4833 4.65528 23.0268 3.44624 23.1548 1.9972C23.1738 1.77569 23.1508 1.54668 22.9168 1.43018ZM11.1749 14.4736C9.15936 12.889 8.18184 12.3675 7.77832 12.39C7.40081 12.4125 7.46881 12.8445 7.55182 13.126C7.63882 13.404 7.75182 13.5955 7.91033 13.8396C8.01983 14.0011 8.09533 14.2411 7.80083 14.4216C7.15181 14.8231 6.02327 14.2866 5.97027 14.2601C4.65673 13.4865 3.5587 12.4655 2.78467 11.069C2.03715 9.72493 1.60314 8.28289 1.53164 6.74384C1.51264 6.37233 1.62214 6.24082 1.99215 6.17332C2.47916 6.08332 2.98118 6.06432 3.46769 6.13582C5.52476 6.43633 7.27581 7.35586 8.74385 8.8129C9.58188 9.64243 10.2159 10.634 10.8689 11.6025C11.5634 12.631 12.3105 13.611 13.262 14.4146C13.598 14.6961 13.866 14.9101 14.1225 15.0681C13.349 15.1546 12.058 15.1731 11.1749 14.4746L11.1749 14.4736ZM12.141 8.25988C12.141 8.09488 12.273 7.96338 12.439 7.96338C12.4765 7.96338 12.5105 7.97088 12.541 7.98188C12.5825 7.99688 12.6205 8.01938 12.6505 8.05338C12.7035 8.10588 12.7335 8.18088 12.7335 8.25988C12.7335 8.42489 12.6015 8.55639 12.4355 8.55639C12.2695 8.55639 12.141 8.42489 12.141 8.25988ZM15.1415 9.79893C14.949 9.87793 14.7565 9.94544 14.5715 9.95294C14.2845 9.96794 13.9715 9.85143 13.8015 9.70893C13.5375 9.48742 13.3485 9.36342 13.2695 8.97691C13.2355 8.8119 13.2545 8.55639 13.2845 8.40989C13.3525 8.09438 13.277 7.89187 13.0545 7.70787C12.8735 7.55786 12.643 7.51636 12.39 7.51636C12.2955 7.51636 12.209 7.47486 12.1445 7.44136C12.039 7.38886 11.9519 7.25735 12.035 7.09585C12.0615 7.04335 12.19 6.91584 12.22 6.89334C12.5635 6.69784 12.9595 6.76184 13.326 6.90834C13.6655 7.04735 13.9225 7.30236 14.292 7.66287C14.6695 8.09838 14.7375 8.21838 14.9525 8.54539C15.1225 8.8009 15.277 9.06341 15.3831 9.36392C15.4471 9.55142 15.3641 9.70493 15.1415 9.79893Z'
+    const FISH_PATH = 'M2.8 6 L0.2 2.4 L0.2 9.6 Z M2.5 6 C2.5 2.9 5.5 0.6 14 0.8 C18 1 20 2.6 20 6 C20 9.4 18 11 14 11.2 C5.5 11.4 2.5 9.1 2.5 6 Z'
+
+    // ---------- 样式（全部挂在 body 上，z-index 拉满以盖过任何对话框） ----------
+    styles.insert(`
+.dshp-whale-root{position:fixed;width:88px;height:88px;z-index:2147483000;pointer-events:none;transition-property:left,top;transition-timing-function:cubic-bezier(.42,0,.58,1);will-change:left,top}
+.dshp-whale-pet{position:relative;width:88px;height:88px;display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:pointer;background:transparent;border:none;padding:0;-webkit-tap-highlight-color:transparent;transition:transform .45s ease}
+.dshp-whale-svg{width:78px;height:auto;display:block;transform-origin:82% 52%;animation:dshp-bob 2.6s ease-in-out infinite;filter:drop-shadow(0 8px 12px rgba(30,64,175,.28))}
+.dshp-whale-swimming .dshp-whale-svg{animation:dshp-swim .55s ease-in-out infinite}
+.dshp-whale-working .dshp-whale-svg{animation-duration:1.1s}
+.dshp-whale-aura{position:absolute;left:4px;right:4px;top:4px;bottom:4px;border-radius:50%;background:radial-gradient(circle,rgba(97,135,216,.42),rgba(97,135,216,0) 66%);opacity:0;pointer-events:none}
+.dshp-whale-working .dshp-whale-aura{animation:dshp-pulse 1.1s ease-in-out infinite}
+.dshp-whale-bubble{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;color:#24304d;border:1px solid rgba(97,135,216,.35);border-radius:14px;padding:7px 12px;font-size:13px;line-height:1.45;box-shadow:0 6px 18px rgba(15,23,42,.16);pointer-events:none;animation:dshp-pop .22s ease-out}
+.dshp-whale-bubble::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
+.dshp-whale-eye{animation:dshp-blink 4.6s infinite;transform-origin:19px 3.7px}
+.dshp-whale-spout{position:absolute;left:63%;top:4px;width:28px;height:36px;pointer-events:none;opacity:0}
+.dshp-whale-spouting .dshp-whale-spout{opacity:1}
+.dshp-whale-spout::before{content:"";position:absolute;bottom:0;left:50%;width:4px;height:20px;border-radius:3px;background:linear-gradient(#d9ecff,#9ec5ff);transform:translateX(-50%) scaleY(0);transform-origin:bottom}
+.dshp-whale-spouting .dshp-whale-spout::before{animation:dshp-column 1.15s ease-out forwards}
+.dshp-whale-spout i{position:absolute;bottom:1px;left:50%;width:5px;height:5px;border-radius:50%;background:#a8ccff;opacity:0}
+.dshp-whale-spouting .dshp-whale-spout i{animation:dshp-drop 1.15s ease-out forwards}
+.dshp-whale-spouting .dshp-whale-spout i:nth-child(1){animation-delay:0s;--dx:0px}
+.dshp-whale-spouting .dshp-whale-spout i:nth-child(2){animation-delay:.1s;--dx:-4px}
+.dshp-whale-spouting .dshp-whale-spout i:nth-child(3){animation-delay:.2s;--dx:4px}
+.dshp-whale-spouting .dshp-whale-spout i:nth-child(4){animation-delay:.3s;--dx:-7px}
+.dshp-whale-spouting .dshp-whale-spout i:nth-child(5){animation-delay:.4s;--dx:7px}
+.dshp-whale-pond{position:fixed;width:230px;height:130px;right:18px;bottom:18px;z-index:2147482900;pointer-events:none}
+.dshp-whale-pond-water{position:absolute;inset:6px 2px 2px 6px;border-radius:50%;background:radial-gradient(ellipse at 42% 34%,#8ec0f5 0%,#5590dd 45%,#3a6cc4 100%);box-shadow:inset 0 -12px 24px rgba(21,51,120,.4),inset 0 8px 16px rgba(255,255,255,.28),0 12px 28px rgba(30,64,175,.3)}
+.dshp-whale-pond::before,.dshp-whale-pond::after{content:"";position:absolute;border-radius:50%;pointer-events:none}
+.dshp-whale-pond::before{inset:16px 10px 8px 14px;border:2px solid rgba(255,255,255,.35);animation:dshp-ripple 4.4s ease-in-out infinite}
+.dshp-whale-pond::after{inset:24px 18px 16px 22px;border-width:1.5px;border:1.5px solid rgba(255,255,255,.25);animation:dshp-ripple 5.6s ease-in-out infinite reverse}
+.dshp-whale-fish{position:absolute;width:22px;height:13px;pointer-events:none}
+.dshp-whale-fish-flip{width:100%;height:100%}
+.dshp-whale-fish-svg{width:100%;height:100%;display:block;animation:dshp-fish-wiggle .9s ease-in-out infinite;filter:drop-shadow(0 2px 3px rgba(21,51,120,.25))}
+.dshp-whale-fish-leave{opacity:0;transform:scale(.3);transition:opacity .5s ease,transform .5s ease}
+.dshp-whale-fish-eaten{opacity:0;transform:scale(.1) translateY(-8px);transition:opacity .4s ease,transform .4s ease}
+@keyframes dshp-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+@keyframes dshp-swim{0%,100%{transform:rotate(7deg) translateX(1px)}50%{transform:rotate(-7deg) translateX(-1px)}}
+@keyframes dshp-pulse{0%{opacity:.25;transform:scale(.85)}55%{opacity:.75;transform:scale(1.15)}100%{opacity:.15;transform:scale(.85)}}
+@keyframes dshp-blink{0%,93%,100%{transform:scaleY(1)}95%,97%{transform:scaleY(.08)}}
+@keyframes dshp-pop{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(.85)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes dshp-column{0%{transform:translateX(-50%) scaleY(0);opacity:0}25%{transform:translateX(-50%) scaleY(1);opacity:.95}65%{opacity:.55}100%{transform:translateX(-50%) scaleY(.2);opacity:0}}
+@keyframes dshp-drop{0%{transform:translate(0,0) scale(.8);opacity:0}12%{opacity:.95}55%{transform:translate(var(--dx),-24px) scale(1);opacity:.9}85%{transform:translate(calc(var(--dx)*2.4),-12px) scale(.85);opacity:.55}100%{transform:translate(calc(var(--dx)*3.4),-2px) scale(.6);opacity:0}}
+@keyframes dshp-ripple{0%,100%{transform:scale(1);opacity:.45}50%{transform:scale(1.05);opacity:.9}}
+@keyframes dshp-fish-wiggle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+`)
+
+    // ---------- 工具函数 ----------
+    const viewW = () => window.innerWidth
+    const viewH = () => window.innerHeight
+    const pick = (arr) => arr[(Math.random() * arr.length) | 0]
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+    const svgNS = 'http://www.w3.org/2000/svg'
+    const el = (tag, cls, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (parent) parent.appendChild(n); return n }
+    const svgEl = (tag, attrs, parent) => { const n = document.createElementNS(svgNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n }
+
+    // ---------- Web Audio 合成音效 ----------
+    let audioCtx = null
+    let audioDead = false
+    const getAudio = () => {
+      if (audioDead) return null
+      if (audioCtx !== null) return audioCtx
+      try {
+        const Ctor = window.AudioContext || window.webkitAudioContext
+        if (!Ctor) throw new Error('no audio')
+        audioCtx = new Ctor()
+      } catch (err) { audioDead = true; return null }
+      return audioCtx
+    }
+    const wakeAudio = () => {
+      const ac = getAudio()
+      if (ac && ac.state === 'suspended' && typeof ac.resume === 'function') { try { ac.resume() } catch (err) { /* 忽略 */ } }
+    }
+    const tone = (f1, f2, dur, type, vol, delay) => {
+      const ac = getAudio()
+      if (!ac) return
+      wakeAudio()
+      const t0 = ac.currentTime + (delay || 0)
+      const osc = ac.createOscillator()
+      const gain = ac.createGain()
+      osc.type = type || 'sine'
+      osc.frequency.setValueAtTime(Math.max(f1, 1), t0)
+      if (f2 && f2 !== f1) osc.frequency.exponentialRampToValueAtTime(Math.max(f2, 1), t0 + dur)
+      gain.gain.setValueAtTime(0.0001, t0)
+      gain.gain.exponentialRampToValueAtTime(vol || 0.06, t0 + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+      osc.connect(gain)
+      gain.connect(ac.destination)
+      osc.start(t0)
+      osc.stop(t0 + dur + 0.05)
+    }
+    const whaleSong = () => {
+      const ac = getAudio()
+      if (!ac) return
+      wakeAudio()
+      const t0 = ac.currentTime
+      const osc = ac.createOscillator()
+      const gain = ac.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(300, t0)
+      osc.frequency.exponentialRampToValueAtTime(920, t0 + 0.4)
+      osc.frequency.exponentialRampToValueAtTime(380, t0 + 1.0)
+      gain.gain.setValueAtTime(0.0001, t0)
+      gain.gain.exponentialRampToValueAtTime(0.07, t0 + 0.15)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.05)
+      osc.connect(gain)
+      gain.connect(ac.destination)
+      osc.start(t0)
+      osc.stop(t0 + 1.1)
+    }
+    let lastToolSound = 0
+    const playSound = (kind) => {
+      if (kind === 'agent-start') { tone(440, 660, 0.16, 'triangle', 0.05, 0); tone(660, 880, 0.16, 'triangle', 0.05, 0.13) }
+      else if (kind === 'agent-idle') { tone(880, 700, 0.18, 'sine', 0.05, 0); tone(700, 500, 0.24, 'sine', 0.04, 0.14) }
+      else if (kind === 'agent-error') { tone(240, 130, 0.32, 'sawtooth', 0.035, 0) }
+      else if (kind === 'user-message') { tone(523, 784, 0.14, 'sine', 0.05, 0); tone(784, 1047, 0.14, 'sine', 0.05, 0.1) }
+      else if (kind === 'tool-start') {
+        const now = Date.now()
+        if (now - lastToolSound < 2500) return
+        lastToolSound = now
+        tone(620, 980, 0.07, 'sine', 0.03, 0)
+      }
+      else if (kind === 'approval-ask') { tone(392, 392, 0.16, 'triangle', 0.05, 0); tone(523, 523, 0.2, 'triangle', 0.05, 0.16) }
+      else if (kind === 'approval-yes') { tone(523, 659, 0.13, 'triangle', 0.05, 0); tone(659, 784, 0.18, 'triangle', 0.05, 0.11) }
+      else if (kind === 'approval-no') { tone(392, 311, 0.2, 'triangle', 0.04, 0) }
+      else if (kind === 'click') { tone(520, 1040, 0.11, 'sine', 0.055, 0); tone(1040, 1560, 0.11, 'sine', 0.055, 0.09) }
+      else if (kind === 'orbit') { tone(500, 1400, 0.3, 'sine', 0.05, 0) }
+      else if (kind === 'eat') { tone(200, 120, 0.09, 'square', 0.05, 0); tone(150, 90, 0.12, 'square', 0.05, 0.1) }
+      else if (kind === 'spout') { tone(900, 320, 0.3, 'sine', 0.03, 0) }
+      else if (kind === 'hello') { whaleSong() }
+    }
+
+    // ---------- 台词 ----------
+    const TOOL_LINES = {
+      read: '正在翻阅资料…', glob: '正在到处找文件…', grep: '正在检索内容…',
+      web_search: '我去网上游一圈～', web_fetch: '正在打捞网页…',
+      write: '正在认真写代码…', edit: '正在修改文件…',
+      pwsh: '正在敲命令…', bash: '正在执行命令…',
+      ask_user_question: '等一下，我有个问题！',
+      subagent: '派出小鱼分队！', subagent_fork: '分身出动！',
+      todo_write: '正在整理任务清单…', create_goal: '目标已记下！', update_goal: '目标状态更新～', get_goal: '正在查看目标…',
+      skill: '正在学习新技能…', cordis_define: '正在组装插件…', cordis_run: '插件启动！',
+      workflow: '大军出动！', ralph: '新一轮接力开始～', job_output: '查看任务进度…', job_list: '清点任务…', interrupt_agent: '正在呼叫同伴…',
+    }
+    const IDLE_LINES = ['咕噜咕噜…', '探索未至之境！', '今天也在深海里游呀游～', '需要帮忙就叫我哦', '咕嘟咕嘟…', '要不要一起看看代码的海？', '我在池塘边等你哦']
+    const HUNGRY_LINES = ['肚子饿了…去找小鱼～', '小鱼小鱼，别跑～', '开饭时间到！']
+    const EAT_LINES = ['啊呜！小鱼真好吃～', '咕噜～吃饱啦！', '小鱼鱼，快到嘴里来～']
+    const ORBIT_LINES = ['咻～变小啦！', '绕着你转圈圈～', '就围着你游一圈～']
+    const ORBIT_DONE_LINES = ['转完啦！', '好玩好玩～', '头晕晕的…']
+    const lineForTool = (name) => TOOL_LINES[name] || '忙活起来啦～'
+
+    // ---------- 引擎状态 ----------
+    const PET = 88
+    let pos = { x: 200, y: 120 }
+    let facing = 1
+    let scale = 1
+    let working = false
+    let moving = false
+    let spouting = false
+    let bubble = null
+    let bubbleSeq = 0
+    let moveMs = 900
+    let busyUntil = 0
+    let lastClickAt = 0
+    let hunger = 0
+    let mode = 'wander'
+    let orbitRef = null
+    let lastHungrySaidAt = 0
+    let fish = []
+    let fishSeq = 0
+    const pending = []
+    const track = (fn) => { if (typeof fn === 'function') pending.push(fn) }
+
+    // DOM 引用（挂载后填充）
+    let petRoot = null
+    let petBtn = null
+    let bubbleEl = null
+    let pondRoot = null
+
+    const render = () => {
+      if (!petRoot) return
+      petRoot.style.left = pos.x + 'px'
+      petRoot.style.top = pos.y + 'px'
+      petRoot.style.transitionDuration = moveMs + 'ms'
+      petBtn.style.transform = 'scaleX(' + facing + ') scale(' + scale + ')'
+      petRoot.className = 'dshp-whale-root' + (working ? ' dshp-whale-working' : '') + (moving ? ' dshp-whale-swimming' : '') + (spouting ? ' dshp-whale-spouting' : '')
+    }
+
+    const say = (text, ms) => {
+      if (!bubbleEl) return
+      bubble = { id: ++bubbleSeq, text }
+      bubbleEl.textContent = text
+      bubbleEl.style.display = ''
+      // 重放弹出动画
+      bubbleEl.style.animation = 'none'
+      void bubbleEl.offsetWidth
+      bubbleEl.style.animation = ''
+      const id = bubble.id
+      track(ctx.timeout(() => { if (bubble !== null && bubble.id === id) { bubble = null; bubbleEl.style.display = 'none' } }, ms || 4200))
+    }
+
+    const spout = () => {
+      if (spouting) return
+      spouting = true
+      render()
+      playSound('spout')
+      track(ctx.timeout(() => { spouting = false; render() }, 1200))
+    }
+
+    // ---------- 池塘 / 小鱼 ----------
+    const POND_W = 230
+    const POND_H = 130
+    const pondPos = () => ({ x: viewW() - POND_W - 18, y: viewH() - POND_H - 18 })
+    const pondCenter = () => { const p = pondPos(); return { x: p.x + POND_W / 2, y: p.y + POND_H / 2 } }
+
+    const spawnFish = () => {
+      if (!pondRoot) return
+      const cx = POND_W / 2
+      const cy = POND_H / 2
+      const f = { id: ++fishSeq, x: cx, y: cy, tx: cx, ty: cy, nextMove: Date.now() + 600, born: Date.now(), life: 16000 + Math.random() * 26000, leaving: false, el: null }
+      const wrap = el('div', 'dshp-whale-fish')
+      const flip = el('div', 'dshp-whale-fish-flip', wrap)
+      const s = svgEl('svg', { viewBox: '0 0 20 12', class: 'dshp-whale-fish-svg' }, flip)
+      svgEl('path', { d: FISH_PATH, fill: '#ff8fa8' }, s)
+      svgEl('circle', { cx: 15.2, cy: 4.9, r: 0.95, fill: '#5b2440' }, s)
+      wrap.style.left = f.x + 'px'
+      wrap.style.top = f.y + 'px'
+      f.el = wrap
+      pondRoot.appendChild(wrap)
+      fish.push(f)
+    }
+
+    const moveFish = () => {
+      const now = Date.now()
+      const cx = POND_W / 2
+      const cy = POND_H / 2
+      const rx = POND_W / 2 - 26
+      const ry = POND_H / 2 - 24
+      for (const f of fish) {
+        if (f.leaving) continue
+        if (now - f.born >= f.life) {
+          f.leaving = true
+          f.el.classList.add('dshp-whale-fish-leave')
+          ctx.timeout(() => { try { f.el.remove() } catch (err) { /* 忽略 */ } }, 550)
+          continue
+        }
+        if (now >= f.nextMove) {
+          f.nextMove = now + 900 + Math.random() * 1400
+          const a = Math.random() * Math.PI * 2
+          f.tx = clamp(cx + Math.cos(a) * rx, 8, POND_W - 12)
+          f.ty = clamp(cy + Math.sin(a) * ry * 0.9, 8, POND_H - 10)
+        }
+        f.x += (f.tx - f.x) * 0.25
+        f.y += (f.ty - f.y) * 0.25
+        f.el.style.left = f.x + 'px'
+        f.el.style.top = f.y + 'px'
+        const flip = f.el.firstChild
+        if (flip) flip.style.transform = 'scaleX(' + (f.tx >= f.x ? 1 : -1) + ')'
+      }
+      fish = fish.filter((f) => !f.leaving || !f.el.isConnected || f.el.parentNode !== pondRoot)
+      fish = fish.filter((f) => !(f.leaving && Date.now() - (f.born + f.life) > 2000))
+    }
+
+    const nearestFish = () => {
+      const p = pondPos()
+      let best = null
+      let bd = 1e9
+      for (const f of fish) {
+        if (f.leaving) continue
+        const fx = f.x + p.x
+        const fy = f.y + p.y
+        const d = Math.hypot(fx - pos.x, fy - pos.y)
+        if (d < bd) { bd = d; best = f }
+      }
+      return best
+    }
+
+    const eatFish = (f) => {
+      f.leaving = true
+      f.el.classList.add('dshp-whale-fish-eaten')
+      ctx.timeout(() => { try { f.el.remove() } catch (err) { /* 忽略 */ } }, 450)
+      hunger = 0
+      mode = 'wander'
+      busyUntil = Date.now() + 1600
+      say(pick(EAT_LINES))
+      playSound('eat')
+      spout()
+    }
+
+    // ---------- 游动 ----------
+    const swimTo = (x, y, onArrive) => {
+      const tx = clamp(x, 16, viewW() - PET - 16)
+      const ty = clamp(y, 28, viewH() - PET - 24)
+      const dist = Math.hypot(tx - pos.x, ty - pos.y)
+      if (dist < 26) { moving = false; render(); if (onArrive) onArrive(); return }
+      const speed = mode === 'seek' ? 0.9 : (working ? 0.45 : 0.22)
+      moveMs = clamp(Math.round(dist / speed), 350, 3600)
+      facing = tx >= pos.x ? 1 : -1
+      pos = { x: tx, y: ty }
+      busyUntil = Date.now() + moveMs + (mode === 'seek' ? 0 : 400)
+      moving = true
+      render()
+      const finish = () => { moving = false; render() }
+      if (onArrive) track(ctx.timeout(() => { onArrive(); finish() }, moveMs + 40))
+      else track(ctx.timeout(finish, moveMs + 40))
+    }
+
+    const onSeekArrive = () => {
+      const f = nearestFish()
+      if (f && Math.hypot(f.x + pondPos().x - pos.x, f.y + pondPos().y - pos.y) < 40) eatFish(f)
+      else if (hunger < 60) mode = 'wander'
+    }
+
+    const pickTarget = () => {
+      if (!petRoot) return
+      if (mode === 'orbit') return
+      if (Date.now() < busyUntil) return
+      if (mode === 'seek') {
+        const f = nearestFish()
+        if (f) {
+          const p = pondPos()
+          swimTo(f.x + p.x - PET / 2, f.y + p.y - PET / 2, onSeekArrive)
+          return
+        }
+        if (hunger < 60) mode = 'wander'
+        else return
+      }
+      let tx
+      let ty
+      if (Math.random() < 0.22) {
+        // 偶尔在整个页面上随机游动
+        tx = 20 + Math.random() * Math.max(40, viewW() - PET - 40)
+        ty = 36 + Math.random() * Math.max(40, viewH() - PET - 130)
+      } else {
+        // 平时在池塘附近游动
+        const c = pondCenter()
+        const a = Math.random() * Math.PI * 2
+        const r = 30 + Math.random() * 170
+        tx = c.x + Math.cos(a) * r - PET / 2
+        ty = c.y + Math.sin(a) * r * 0.8 - PET / 2
+        tx = clamp(tx, 16, viewW() - PET - 16)
+        ty = clamp(ty, 28, viewH() - PET - 24)
+      }
+      swimTo(tx, ty, null)
+    }
+
+    // ---------- 点击：快速游过去 → 变小 → 围着点击处绕一圈 ----------
+    const startOrbit = (cx, cy) => {
+      const R = 52
+      cx = clamp(cx, R + 16, viewW() - R - 16)
+      cy = clamp(cy, R + 50, viewH() - R - 40)
+      if (orbitRef) { try { orbitRef() } catch (err) { /* 忽略 */ } }
+      mode = 'orbit'
+      const ax = cx
+      const ay = cy - R
+      const dist = Math.hypot(ax - pos.x, ay - pos.y)
+      moveMs = clamp(Math.round(dist / 1.15), 300, 1100)
+      facing = ax >= pos.x ? 1 : -1
+      pos = { x: ax, y: ay }
+      busyUntil = Date.now() + moveMs + 3200
+      moving = true
+      render()
+      say(pick(ORBIT_LINES))
+      playSound('click')
+      track(ctx.timeout(() => {
+        scale = 0.45
+        render()
+        playSound('orbit')
+        let theta = -Math.PI / 2
+        const dir = Math.random() < 0.5 ? 1 : -1
+        const step = 0.085 * dir
+        const stopOrbit = ctx.interval(() => {
+          theta += step
+          if (Math.abs(theta + Math.PI / 2) >= Math.PI * 2 - 0.02) {
+            stopOrbit()
+            orbitRef = null
+            scale = 1
+            mode = 'wander'
+            moving = false
+            busyUntil = Date.now() + 600
+            render()
+            say(pick(ORBIT_DONE_LINES))
+            track(ctx.timeout(() => pickTarget(), 1400))
+            return
+          }
+          pos = { x: cx + Math.cos(theta) * R - PET / 2, y: cy + Math.sin(theta) * R - PET / 2 }
+          const vx = -Math.sin(theta) * dir
+          facing = vx >= 0 ? 1 : -1
+          moveMs = 70
+          render()
+        }, 60)
+        orbitRef = stopOrbit
+      }, moveMs + 30))
+    }
+
+    // ---------- 事件处理 ----------
+    const handleEvent = (ev) => {
+      if (!ev || typeof ev.kind !== 'string') return
+      switch (ev.kind) {
+        case 'agent-start': working = true; say('开工啦！'); playSound('agent-start'); break
+        case 'agent-idle': working = false; say('搞定啦～'); playSound('agent-idle'); break
+        case 'agent-error': say('哎呀，遇到点小麻烦…'); playSound('agent-error'); break
+        case 'user-message': say('收到！我马上看看～'); playSound('user-message'); break
+        case 'tool-start': say(lineForTool(ev.tool)); playSound('tool-start'); break
+        case 'approval-ask': say('这里需要你的决定哦～'); playSound('approval-ask'); break
+        case 'approval-yes': say('谢谢批准！'); playSound('approval-yes'); break
+        case 'approval-no': say('好嘞，我换个思路～'); playSound('approval-no'); break
+        default: break
+      }
+      render()
+    }
+
+    // ---------- 挂载 ----------
+    ctx.effect(() => {
+      // 池塘
+      pondRoot = el('div', 'dshp-whale-pond')
+      el('div', 'dshp-whale-pond-water', pondRoot)
+      document.body.appendChild(pondRoot)
+
+      // 桌宠
+      petRoot = el('div', 'dshp-whale-root')
+      el('div', 'dshp-whale-aura', petRoot)
+      bubbleEl = el('div', 'dshp-whale-bubble', petRoot)
+      bubbleEl.style.display = 'none'
+      const spoutEl = el('div', 'dshp-whale-spout', petRoot)
+      for (let i = 0; i < 5; i++) el('i', '', spoutEl)
+      petBtn = el('button', 'dshp-whale-pet', petRoot)
+      petBtn.type = 'button'
+      petBtn.setAttribute('aria-label', '鲸鱼桌宠')
+      petBtn.title = '探索小鲸'
+      const svg = svgEl('svg', { class: 'dshp-whale-svg', viewBox: '0 0 23.16 17.04', 'aria-hidden': 'true' }, petBtn)
+      svgEl('path', { d: WHALE_PATH, fill: '#6187D8' }, svg)
+      svgEl('circle', { class: 'dshp-whale-eye', cx: 19, cy: 3.7, r: 0.6, fill: '#15244a' }, svg)
+      svgEl('circle', { cx: 19.14, cy: 3.5, r: 0.17, fill: '#ffffff' }, svg)
+      svgEl('ellipse', { cx: 17.9, cy: 4.9, rx: 0.72, ry: 0.42, fill: '#ff9db1', opacity: '0.8' }, svg)
+      document.body.appendChild(petRoot)
+
+      pos = { x: clamp(viewW() - 300, 60, viewW() - 120), y: clamp(110 + Math.random() * 120, 40, viewH() - 160) }
+      render()
+      say('你好！我是探索小鲸，旁边是我的小池塘～')
+      playSound('hello')
+      track(ctx.timeout(() => pickTarget(), 1400))
+
+      const stopPoll = ctx.interval(async () => {
+        try {
+          const res = await host.call('pet/poll')
+          if (!res) return
+          const evs = Array.isArray(res.events) ? res.events : []
+          for (const ev of evs) handleEvent(ev)
+          if (res.status === 'running' && !working) { working = true; render() }
+          else if (res.status !== 'running' && working) { working = false; render() }
+        } catch (err) { /* 离线时静默 */ }
+      }, 700)
+
+      const stopWander = ctx.interval(() => pickTarget(), 3000)
+
+      const stopChatter = ctx.interval(() => {
+        if (working) return
+        if (bubble !== null) return
+        if (Date.now() - lastClickAt < 9000) return
+        if (Math.random() < 0.4) { say(pick(IDLE_LINES)); whaleSong() }
+      }, 15000)
+
+      const stopSpawn = ctx.interval(() => { if (fish.length < 3 && Math.random() < 0.55) spawnFish() }, 6500)
+
+      const stopFishMove = ctx.interval(() => moveFish(), 850)
+
+      const stopHunger = ctx.interval(() => {
+        hunger = Math.min(100, hunger + 13)
+        if (hunger >= 60 && mode === 'wander') { mode = 'seek'; say(pick(HUNGRY_LINES)) }
+        if (hunger >= 80 && fish.length === 0 && Date.now() - lastHungrySaidAt > 25000) {
+          lastHungrySaidAt = Date.now()
+          say(pick(HUNGRY_LINES))
+        }
+      }, 5000)
+
+      const stopSpoutTimer = ctx.interval(() => {
+        if (busyUntil < Date.now() && mode !== 'orbit' && Math.random() < 0.45) spout()
+      }, 9000)
+
+      let stopClick = () => {}
+      let stopResize = () => {}
+      const onClick = (ev) => {
+        try {
+          if (!ev || typeof ev.clientX !== 'number') return
+          if (ev.button === 2) return
+          const now = Date.now()
+          if (now - lastClickAt < 500) return
+          lastClickAt = now
+          wakeAudio()
+          startOrbit(ev.clientX, ev.clientY)
+        } catch (err) { /* 绝不打断页面 */ }
+      }
+      document.addEventListener('click', onClick)
+      stopClick = () => document.removeEventListener('click', onClick)
+      const onResize = () => {
+        if (mode === 'orbit') return
+        const nx = clamp(pos.x, 16, viewW() - PET - 16)
+        const ny = clamp(pos.y, 28, viewH() - PET - 24)
+        if (nx !== pos.x || ny !== pos.y) { pos = { x: nx, y: ny }; render() }
+      }
+      window.addEventListener('resize', onResize)
+      stopResize = () => window.removeEventListener('resize', onResize)
+
+      console.log('whale-pet v2 已挂载：桌宠 + 池塘 + 小鱼')
+
+      return () => {
+        stopPoll()
+        stopWander()
+        stopChatter()
+        stopSpawn()
+        stopFishMove()
+        stopHunger()
+        stopSpoutTimer()
+        stopClick()
+        stopResize()
+        if (orbitRef) { try { orbitRef() } catch (err) { /* 忽略 */ } }
+        orbitRef = null
+        for (const d of pending) { try { d() } catch (err) { /* 忽略 */ } }
+        pending.length = 0
+        fish = []
+        try { petRoot.remove() } catch (err) { /* 忽略 */ }
+        try { pondRoot.remove() } catch (err) { /* 忽略 */ }
+        petRoot = null
+        pondRoot = null
+      }
+    })
+  },
+}
